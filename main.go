@@ -11,6 +11,8 @@ import (
 	"image/color"
 	"log"
 	"os"
+	"os/exec"
+	"runtime"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -114,7 +116,7 @@ func (g *Game) currentConfig() SimConfig {
 
 // Update вызывается Ebitengine каждый тик (60 раз/с).
 func (g *Game) Update() error {
-	// Клавиша ESC — завершение программы (§4.1 ТЗ: корректное завершение)
+	// Клавиша ESC — завершение программы.
 	if ebiten.IsKeyPressed(ebiten.KeyEscape) {
 		return ebiten.Termination
 	}
@@ -129,16 +131,14 @@ func (g *Game) Update() error {
 		}
 	}
 
-	// V — показать/скрыть векторы скоростей
+	// V — показать/скрыть векторы скоростей.
 	if inpututil.IsKeyJustPressed(ebiten.KeyV) {
 		g.showVectors = !g.showVectors
 	}
 
-	// F1 TODO (прототип) открыть CHM-справку
+	// Открыть справку.
 	if inpututil.IsKeyJustPressed(ebiten.KeyF1) {
-		// TODO: exec.Command("hh.exe", "brownian.chm").Start() — Windows
-		// TODO: xdg-open / gio open — Linux
-		log.Println("[TODO] Справочная система CHM будет реализована в финальной версии")
+		openHelp()
 	}
 
 	// Обновляем ползунки
@@ -294,15 +294,10 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	y += 14
 	text.Draw(screen, "V       — векторы", face, x, y, color.White)
 	y += 14
-	text.Draw(screen, "F1      — справка*", face, x, y, color.White)
+	text.Draw(screen, "F1      — справка", face, x, y, color.White)
 	y += 14
 	text.Draw(screen, "Escape  — выход", face, x, y, color.White)
 	y += 24
-
-	// Примечание о прototипе
-	text.Draw(screen, "* TODO: CHM-справка", face, x, y, color.White)
-	y += 14
-	text.Draw(screen, "  (финальная версия)", face, x, y, color.White)
 }
 
 // Layout возвращает логические размеры экрана (Ebitengine §Layout).
@@ -310,9 +305,23 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return WindowWidth, WindowHeight
 }
 
+func openHelp() {
+	helpFile := "help.html"
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", helpFile)
+	case "darwin":
+		cmd = exec.Command("open", helpFile)
+	default: // linux
+		cmd = exec.Command("xdg-open", helpFile)
+	}
+	cmd.Start()
+}
+
 func main() {
 	ebiten.SetWindowSize(WindowWidth, WindowHeight)
-	ebiten.SetWindowTitle("Броуновское движение — РГР по программированию")
+	ebiten.SetWindowTitle("Броуновское движение")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	// Запрет вертикального синхросигнала для более высокого FPS при отладке:
