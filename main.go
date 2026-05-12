@@ -99,8 +99,8 @@ func NewGame() *Game {
 		sliderCount:  NewSlider(px, 80, pw, "Частицы", 2, 100, cfg.Count),
 		sliderSpeed:  NewSlider(px, 150, pw, "Скорость", 1, 8, int(cfg.Speed*2)),
 		sliderRadius: NewSlider(px, 220, pw, "Радиус", 4, 18, int(cfg.Radius)),
-		btnPause:     NewButton(px, 280, pw, 32, "[ ПАУЗА ]"),
-		btnReset:     NewButton(px, 322, pw, 32, "[ СБРОС ]"),
+		btnPause:     NewButton(px, 280, pw, 32, "[ Pause ]"),
+		btnReset:     NewButton(px, 322, pw, 32, "[ Reset ]"),
 	}
 	return g
 }
@@ -220,7 +220,7 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	// Заголовок
 	text.Draw(screen, "БРОУНОВСКОЕ ДВИЖЕНИЕ", face, x, y, color.White)
 	y += 18
-	text.Draw(screen, "──────────────────", face, x, y, color.White)
+	text.Draw(screen, "────────────────────────", face, x, y, color.White)
 	y += 20
 
 	// Ползунки с подписями и текущими значениями
@@ -258,7 +258,7 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	y += 50
 
 	// Разделитель
-	text.Draw(screen, "──────────────────", face, x, y, color.White)
+	text.Draw(screen, "────────────────────────", face, x, y, color.White)
 	y += 18
 
 	// Статистика
@@ -266,25 +266,21 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	y += 18
 
 	ke := g.sim.TotalKineticEnergy()
-	text.Draw(screen, fmt.Sprintf("Частиц:       %d", len(g.sim.Particles)), face, x, y, color.White)
-	y += 16
 	text.Draw(screen, fmt.Sprintf("Столкновений: %d", g.sim.Collisions), face, x, y, color.White)
 	y += 16
 	text.Draw(screen, fmt.Sprintf("Кин. энергия: %.1f", ke), face, x, y, color.White)
 	y += 16
-	text.Draw(screen, fmt.Sprintf("FPS:          %.0f", g.fps), face, x, y, color.White)
-	y += 30
 
 	// Статус паузы
 	status := "▶ работает"
 	if !g.sim.Running {
-		status = "⏸ пауза"
+		status = "|| пауза"
 	}
 	text.Draw(screen, "Состояние: "+status, face, x, y, color.White)
 	y += 30
 
 	// Разделитель
-	text.Draw(screen, "──────────────────", face, x, y, color.White)
+	text.Draw(screen, "────────────────────────", face, x, y, color.White)
 	y += 18
 
 	// Горячие клавиши

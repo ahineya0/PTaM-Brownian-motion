@@ -91,10 +91,6 @@ func DrawParticles(screen *ebiten.Image, sim *Simulation, offsetX, offsetY int) 
 
 		vector.DrawFilledCircle(screen, sx, sy, r, fill, true)
 		vector.StrokeCircle(screen, sx, sy, r, 1.2, stroke, true)
-
-		// Небольшая «бликовая» точка для объёма
-		vector.DrawFilledCircle(screen, sx-r*0.28, sy-r*0.28, r*0.22,
-			color.RGBA{255, 255, 255, 60}, true)
 	}
 }
 
