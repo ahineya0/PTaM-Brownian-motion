@@ -75,31 +75,26 @@ func DrawSimField(screen *ebiten.Image, offsetX, offsetY, w, h int) {
 	vector.StrokeRect(screen,
 		float32(offsetX), float32(offsetY),
 		float32(w), float32(h),
-		10, colorBorder, false)
+		2, colorBorder, false)
 }
 
 // DrawParticles рисует все частицы симуляции.
 // offsetX, offsetY — смещение области симуляции на экране.
-// Масса влияет на яркость: тяжелые — светлее, лёгкие — темнее.
 func DrawParticles(screen *ebiten.Image, sim *Simulation, offsetX, offsetY int) {
 	for _, p := range sim.Particles {
 		sx := float32(p.X) + float32(offsetX)
 		sy := float32(p.Y) + float32(offsetY)
 		r := float32(p.R)
 
-		// Расчитываем линейно яркость в зависимости от массы
-		// минмасса (0.5) -> 0.35 (темные)
-		// максмасса (2.0) -> 0.75 (светлые)
-		massRange := sim.Config.MassMax - sim.Config.MassMin
-		massRatio := (p.Mass - sim.Config.MassMin) / massRange
-		lightness := 0.35 + massRatio*0.4 // диапазон 0.35..0.75
-
-		fill := hslToRGB(p.Hue, 0.75, lightness)
+		fill := hslToRGB(p.Hue, 0.75, 0.55)
 		stroke := darken(fill, 0.6)
 
 		vector.DrawFilledCircle(screen, sx, sy, r, fill, true)
 		vector.StrokeCircle(screen, sx, sy, r, 1.2, stroke, true)
 
+		// Небольшая «бликовая» точка для объёма
+		vector.DrawFilledCircle(screen, sx-r*0.28, sy-r*0.28, r*0.22,
+			color.RGBA{255, 255, 255, 60}, true)
 	}
 }
 
