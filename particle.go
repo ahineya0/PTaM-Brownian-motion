@@ -11,18 +11,20 @@ type Particle struct {
 	VX, VY float64 // вектор скорости
 	R      float64 // радиус (для визуализации и обнаружения столкновений)
 	Hue    float64 // цвет (HSL, оттенок 0–360)
+	Mass   float64 // масса частицы
 }
 
 // NewParticle создаёт частицу со случайным направлением скорости.
-func NewParticle(x, y, speed, radius float64) *Particle {
+func NewParticle(x, y, speed, radius, mass float64) *Particle {
 	angle := rand.Float64() * 2 * math.Pi
 	return &Particle{
-		X:   x,
-		Y:   y,
-		VX:  math.Cos(angle) * speed,
-		VY:  math.Sin(angle) * speed,
-		R:   radius,
-		Hue: rand.Float64() * 360,
+		X:    x,
+		Y:    y,
+		VX:   math.Cos(angle) * speed,
+		VY:   math.Sin(angle) * speed,
+		R:    radius,
+		Hue:  rand.Float64() * 360,
+		Mass: mass,
 	}
 }
 
@@ -60,8 +62,8 @@ func (p *Particle) ReflectWalls(width, height float64) {
 }
 
 // ResolveCollision обрабатывает абсолютно упругое столкновение двух частиц
-// равной массы методом нормальных и тангенциальных компонент скоростей
-// вдоль линии центров (см. Приложение А ТЗ и раздел 1.3 анализа предметной области).
+// методом нормальных и тангенциальных компонент скоростей
+// вдоль линии центров. Работает с частицами разных масс.
 // Возвращает true, если столкновение произошло.
 func ResolveCollision(a, b *Particle) bool {
 	dx := b.X - a.X
@@ -93,10 +95,14 @@ func ResolveCollision(a, b *Particle) bool {
 	v1t := -a.VX*ny + a.VY*nx
 	v2t := -b.VX*ny + b.VY*nx
 
-	// Для равных масс нормальные компоненты обмениваются (центральный удар),
-	// тангенциальные остаются неизменными (трения нет).
-	u1n := v2n
-	u2n := v1n
+	// Для упругого столкновения с произвольными массами
+	// u1n = (m1-m2)/(m1+m2)*v1n + 2*m2/(m1+m2)*v2n
+	// u2n = 2*m1/(m1+m2)*v1n + (m2-m1)/(m1+m2)*v2n
+	m1 := a.Mass
+	m2 := b.Mass
+	totalMass := m1 + m2
+	u1n := ((m1 - m2) / totalMass * v1n) + (2*m2/totalMass)*v2n
+	u2n := (2*m1/totalMass)*v1n + ((m2-m1)/totalMass)*v2n
 	u1t := v1t
 	u2t := v2t
 

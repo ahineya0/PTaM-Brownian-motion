@@ -7,17 +7,21 @@ import (
 
 // SimConfig хранит параметры симуляции, задаваемые пользователем.
 type SimConfig struct {
-	Count  int     // количество частиц [2..100]
-	Speed  float64 // начальная скорость (пикс./кадр)
-	Radius float64 // радиус частицы (пикс.)
+	Count   int     // количество частиц [2..100]
+	Speed   float64 // начальная скорость (пикс./кадр)
+	Radius  float64 // радиус частицы (пикс.)
+	MassMin float64 // минимальная масса
+	MassMax float64 // максимальная масса
 }
 
 // DefaultConfig возвращает конфигурацию по умолчанию.
 func DefaultConfig() SimConfig {
 	return SimConfig{
-		Count:  30,
-		Speed:  2.5,
-		Radius: 9,
+		Count:   30,
+		Speed:   2.5,
+		Radius:  9,
+		MassMin: 0.5,
+		MassMax: 2.0,
 	}
 }
 
@@ -50,14 +54,24 @@ func (s *Simulation) Reset(cfg SimConfig) {
 	s.Particles = make([]*Particle, 0, cfg.Count)
 
 	for i := 0; i < cfg.Count; i++ {
-		p := s.placeParticle(cfg.Speed, cfg.Radius)
+		p := s.placeParticle(cfg.Speed, cfg.Radius, cfg.MassMin, cfg.MassMax)
 		s.Particles = append(s.Particles, p)
 	}
 }
 
 // placeParticle пытается разместить частицу без перекрытия с уже созданными.
-func (s *Simulation) placeParticle(speed, radius float64) *Particle {
+func (s *Simulation) placeParticle(speed, baseRadius, massMin, massMax float64) *Particle {
 	const maxAttempts = 300
+	// Генерируем случайную массу в диапазоне
+	mass := massMin + rand.Float64()*(massMax-massMin)
+
+	// Радиус зависит от массы
+	// Тяжелые с большим радиусом, легкие - с меньшим
+	massRatio := (mass - massMin) / (massMax - massMin) // 0..1
+	// Нормализованный кубический корень для естественного калибрования
+	massScale := math.Cbrt(0.5+massRatio*1.5) / math.Cbrt(1.75) // диапазон 0.5..2.0, нормализованный
+	radius := baseRadius * massScale
+
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		x := radius + rand.Float64()*(s.Width-2*radius)
 		y := radius + rand.Float64()*(s.Height-2*radius)
@@ -70,11 +84,11 @@ func (s *Simulation) placeParticle(speed, radius float64) *Particle {
 			}
 		}
 		if !overlaps {
-			return NewParticle(x, y, speed, radius)
+			return NewParticle(x, y, speed, radius, mass)
 		}
 	}
 	// Если не удалось разместить без перекрытия — ставим в центр области
-	return NewParticle(s.Width/2, s.Height/2, speed, radius)
+	return NewParticle(s.Width/2, s.Height/2, speed, radius, mass)
 }
 
 // Update выполняет один шаг физической симуляции.
@@ -105,13 +119,12 @@ func (s *Simulation) Update() {
 	}
 }
 
-// TotalKineticEnergy возвращает суммарную кинетическую энергию системы
-// (в условных единицах, масса = 1).
+// TotalKineticEnergy возвращает суммарную кинетическую энергию системы.
 func (s *Simulation) TotalKineticEnergy() float64 {
 	var ke float64
 	for _, p := range s.Particles {
 		v := p.Speed()
-		ke += 0.5 * v * v
+		ke += 0.5 * p.Mass * v * v
 	}
 	return ke
 }

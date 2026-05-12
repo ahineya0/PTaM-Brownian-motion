@@ -69,9 +69,11 @@ type Game struct {
 	sim *Simulation
 
 	// Ползунки панели управления
-	sliderCount  *Slider
-	sliderSpeed  *Slider
-	sliderRadius *Slider
+	sliderCount   *Slider
+	sliderSpeed   *Slider
+	sliderRadius  *Slider
+	sliderMassMin *Slider
+	sliderMassMax *Slider
 
 	// Кнопки
 	btnPause *Button
@@ -95,22 +97,32 @@ func NewGame() *Game {
 	pw := PanelWidth - PanelPad*2
 
 	g := &Game{
-		sim:          sim,
-		sliderCount:  NewSlider(px, 80, pw, "Частицы", 2, 100, cfg.Count),
-		sliderSpeed:  NewSlider(px, 150, pw, "Скорость", 1, 8, int(cfg.Speed*2)),
-		sliderRadius: NewSlider(px, 220, pw, "Радиус", 4, 18, int(cfg.Radius)),
-		btnPause:     NewButton(px, 280, pw, 32, "[ ПАУЗА ]"),
-		btnReset:     NewButton(px, 322, pw, 32, "[ СБРОС ]"),
+		sim:           sim,
+		sliderCount:   NewSlider(px, 80, pw, "Частицы", 2, 100, cfg.Count),
+		sliderSpeed:   NewSlider(px, 150, pw, "Скорость", 1, 8, int(cfg.Speed*2)),
+		sliderRadius:  NewSlider(px, 220, pw, "Радиус", 4, 18, int(cfg.Radius)),
+		sliderMassMin: NewSlider(px, 290, pw, "Мин масса", 1, 10, int(cfg.MassMin*2)),
+		sliderMassMax: NewSlider(px, 360, pw, "Макс масса", 1, 10, int(cfg.MassMax*2)),
+		btnPause:      NewButton(px, 430, pw, 32, "[ Pause ]"),
+		btnReset:      NewButton(px, 472, pw, 32, "[ Reset ]"),
 	}
 	return g
 }
 
 // currentConfig собирает конфигурацию из текущих значений ползунков.
 func (g *Game) currentConfig() SimConfig {
+	massMin := float64(g.sliderMassMin.Value) / 2.0
+	massMax := float64(g.sliderMassMax.Value) / 2.0
+	// Обеспечиваем, что мин < макс
+	if massMin > massMax {
+		massMin, massMax = massMax, massMin
+	}
 	return SimConfig{
-		Count:  g.sliderCount.Value,
-		Speed:  float64(g.sliderSpeed.Value) / 2.0,
-		Radius: float64(g.sliderRadius.Value),
+		Count:   g.sliderCount.Value,
+		Speed:   float64(g.sliderSpeed.Value) / 2.0,
+		Radius:  float64(g.sliderRadius.Value),
+		MassMin: massMin,
+		MassMax: massMax,
 	}
 }
 
@@ -145,9 +157,11 @@ func (g *Game) Update() error {
 	countChanged := g.sliderCount.Update()
 	speedChanged := g.sliderSpeed.Update()
 	radiusChanged := g.sliderRadius.Update()
+	massMinChanged := g.sliderMassMin.Update()
+	massMaxChanged := g.sliderMassMax.Update()
 
-	// При изменении числа частиц или радиуса — полный сброс
-	if countChanged || radiusChanged {
+	// При изменении числа частиц, радиуса или диапазона массы — полный сброс
+	if countChanged || radiusChanged || massMinChanged || massMaxChanged {
 		g.sim.Reset(g.currentConfig())
 	}
 
@@ -220,7 +234,7 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	// Заголовок
 	text.Draw(screen, "БРОУНОВСКОЕ ДВИЖЕНИЕ", face, x, y, color.White)
 	y += 18
-	text.Draw(screen, "──────────────────", face, x, y, color.White)
+	text.Draw(screen, "────────────────────────", face, x, y, color.White)
 	y += 20
 
 	// Ползунки с подписями и текущими значениями
@@ -244,6 +258,22 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	g.sliderRadius.Y = y
 	g.sliderRadius.X = x
 	g.sliderRadius.Draw(screen)
+	y += 36
+
+	massMin := float64(g.sliderMassMin.Value) / 2.0
+	text.Draw(screen, fmt.Sprintf("Мин масса: %.1f", massMin), face, x, y, color.White)
+	y += 14
+	g.sliderMassMin.Y = y
+	g.sliderMassMin.X = x
+	g.sliderMassMin.Draw(screen)
+	y += 36
+
+	massMax := float64(g.sliderMassMax.Value) / 2.0
+	text.Draw(screen, fmt.Sprintf("Макс масса: %.1f", massMax), face, x, y, color.White)
+	y += 14
+	g.sliderMassMax.Y = y
+	g.sliderMassMax.X = x
+	g.sliderMassMax.Draw(screen)
 	y += 46
 
 	// Кнопки
@@ -258,7 +288,7 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	y += 50
 
 	// Разделитель
-	text.Draw(screen, "──────────────────", face, x, y, color.White)
+	text.Draw(screen, "────────────────────────", face, x, y, color.White)
 	y += 18
 
 	// Статистика
@@ -266,25 +296,22 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	y += 18
 
 	ke := g.sim.TotalKineticEnergy()
-	text.Draw(screen, fmt.Sprintf("Частиц:       %d", len(g.sim.Particles)), face, x, y, color.White)
-	y += 16
+
 	text.Draw(screen, fmt.Sprintf("Столкновений: %d", g.sim.Collisions), face, x, y, color.White)
 	y += 16
 	text.Draw(screen, fmt.Sprintf("Кин. энергия: %.1f", ke), face, x, y, color.White)
 	y += 16
-	text.Draw(screen, fmt.Sprintf("FPS:          %.0f", g.fps), face, x, y, color.White)
-	y += 30
 
 	// Статус паузы
 	status := "▶ работает"
 	if !g.sim.Running {
-		status = "⏸ пауза"
+		status = "|| пауза"
 	}
 	text.Draw(screen, "Состояние: "+status, face, x, y, color.White)
 	y += 30
 
 	// Разделитель
-	text.Draw(screen, "──────────────────", face, x, y, color.White)
+	text.Draw(screen, "────────────────────────", face, x, y, color.White)
 	y += 18
 
 	// Горячие клавиши
