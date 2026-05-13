@@ -69,9 +69,8 @@ type Game struct {
 	sim *Simulation
 
 	// Ползунки панели управления
-	sliderCount  *Slider
-	sliderSpeed  *Slider
-	sliderRadius *Slider
+	sliderCount *NumericUpDown
+	sliderSpeed *Slider
 
 	// Кнопки
 	btnPause *Button
@@ -95,12 +94,11 @@ func NewGame() *Game {
 	pw := PanelWidth - PanelPad*2
 
 	g := &Game{
-		sim:          sim,
-		sliderCount:  NewSlider(px, 80, pw, "Частицы", 2, 100, cfg.Count),
-		sliderSpeed:  NewSlider(px, 150, pw, "Скорость", 1, 8, int(cfg.Speed*2)),
-		sliderRadius: NewSlider(px, 220, pw, "Радиус", 4, 18, int(cfg.Radius)),
-		btnPause:     NewButton(px, 280, pw, 32, "[ Pause ]"),
-		btnReset:     NewButton(px, 322, pw, 32, "[ Reset ]"),
+		sim:         sim,
+		sliderCount: NewNumericUpDown(px, 80, pw, 2, 100, cfg.Count),
+		sliderSpeed: NewSlider(px, 150, pw, "Скорость", 1, 8, int(cfg.Speed*2)),
+		btnPause:    NewButton(px, 280, pw, 32, "[ Pause ]"),
+		btnReset:    NewButton(px, 322, pw, 32, "[ Reset ]"),
 	}
 	return g
 }
@@ -110,7 +108,7 @@ func (g *Game) currentConfig() SimConfig {
 	return SimConfig{
 		Count:  g.sliderCount.Value,
 		Speed:  float64(g.sliderSpeed.Value) / 2.0,
-		Radius: float64(g.sliderRadius.Value),
+		Radius: 14,
 	}
 }
 
@@ -144,10 +142,9 @@ func (g *Game) Update() error {
 	// Обновляем ползунки
 	countChanged := g.sliderCount.Update()
 	speedChanged := g.sliderSpeed.Update()
-	radiusChanged := g.sliderRadius.Update()
 
 	// При изменении числа частиц или радиуса — полный сброс
-	if countChanged || radiusChanged {
+	if countChanged {
 		g.sim.Reset(g.currentConfig())
 	}
 
@@ -224,27 +221,20 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	y += 20
 
 	// Ползунки с подписями и текущими значениями
-	text.Draw(screen, fmt.Sprintf("Частицы: %d", g.sliderCount.Value), face, x, y, color.White)
-	y += 14
-	g.sliderCount.Y = y
+	text.Draw(screen, "Частицы:", face, x, y, color.White)
+	y += 10
 	g.sliderCount.X = x
+	g.sliderCount.Y = y
 	g.sliderCount.Draw(screen)
-	y += 36
+	y += 50
 
 	speed := float64(g.sliderSpeed.Value) / 2.0
-	text.Draw(screen, fmt.Sprintf("Скорость: %.1f пикс./кадр", speed), face, x, y, color.White)
+	text.Draw(screen, fmt.Sprintf("Скорость: %.1f", speed), face, x, y, color.White)
 	y += 14
 	g.sliderSpeed.Y = y
 	g.sliderSpeed.X = x
 	g.sliderSpeed.Draw(screen)
 	y += 36
-
-	text.Draw(screen, fmt.Sprintf("Радиус: %d пикс.", g.sliderRadius.Value), face, x, y, color.White)
-	y += 14
-	g.sliderRadius.Y = y
-	g.sliderRadius.X = x
-	g.sliderRadius.Draw(screen)
-	y += 46
 
 	// Кнопки
 	g.btnPause.X = x

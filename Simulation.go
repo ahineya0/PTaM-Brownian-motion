@@ -17,7 +17,7 @@ func DefaultConfig() SimConfig {
 	return SimConfig{
 		Count:  30,
 		Speed:  2.5,
-		Radius: 9,
+		Radius: 14,
 	}
 }
 
